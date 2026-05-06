@@ -5,9 +5,89 @@ Rewritten for better implentation
 """
 
 import numpy as np
-from mxlpy import Derived, InitialAssignment, Model
+from mxlpy import Derived, Model
 
 import mxlmodels._names as n
+
+parameters = {
+    # PFD
+    n.light: 200.0,
+    # Pool sizes
+    "PSIItot": 2.5,  # unchanged [mmol/molChl] total concentration of PSII
+    "PQtot": 20.0,  # unchanged [mmol/molChl]
+    "APtot": 50.0,  # unchanged [mmol/molChl] Bionumbers ~2.55mM (=81mmol/molChl)
+    "PsbStot": 1,  # [relative] LHCs that get phosphorylated and protonated
+    "Xtot": 1.0,  # unchanged [relative] xanthophylls
+    "O2ex": 8.0,  # unchanged external oxygen, kept constant, corresponds to 250 microM, corr. to 20%
+    "Pi": 0.01,  # unchanged
+    # Rate constants and key parameters
+    # Cytb6f
+    n.k(
+        "b6f"
+    ): 0.22,  # unchanged a rough estimate of the transfer from PQ to cyt that is equal to ~ 10ms
+    "pKreg": 6.4,  # pKa of pH inihibition of Cytb6f
+    # ATPsynthase
+    "kActATPase": 0.01,  # unchanged parameter relating the rate constant of activation of the ATPase in the light
+    "kDeactATPase": 0.002,  # unchanged parameter relating the deactivation of the ATPase at night
+    "kATPsynthase": 20.0,  # unchanged
+    "kATPconsumption": 10.0,  # unchanged
+    "HPR": 14.0 / 3.0,  # unchanged
+    "pKE0": 7.211142552636095,  # fitted value for ATPsynthase pmf regulation
+    "b": 3.1924977471697407,  # fitted value for ATPsynthase pmf regulation
+    # PQ pool
+    "kPQH2": 250.0,  # unchanged [1/(s*(mmol/molChl))]
+    "kPTOX": 0.01,  # unchanged
+    # PSII
+    "kH_Qslope": 5e9,
+    "kH0": 5e8,  # Andre assumption
+    "kF": 6.25e8,  # unchanged fluorescence 16ns
+    "kP": 6939318750.0,  # Fitted
+    # Proton
+    n.ph_stroma: 7.8,  # unchanged [1/s] leakage rate
+    "kleak": 1000.0,  # unchanged
+    "bH": 100,  # unchanged proton buffer: ratio total / free protons
+    # Parameter associated with xanthophyll cycle
+    "kDeepoxV": 0.00096,  # Fitted
+    "kEpoxZ": 0.0013824,  # Fitted
+    "KphSatZ": 5.8,  # Taken from Zaks model
+    # [-] half-saturation pH value for activity de-epoxidase, highest activity at ~pH 5.8
+    "KZsat": 0.65,  # [-], half-saturation constant (relative conc. of Z) for quenching of Z
+    "nHX": 5.0,  # unchanged, the cooperativity, hill-coefficient for activity of de-epoxidase
+    "nHZ": 3.0,
+    # Parameter associated with PsbS protonation
+    "nHL": 3,
+    "kDeprot": 0.0336,  # Fitted
+    "kProt": 0.07392,  # Fitted
+    "KphSatLHC": 5.8,  # Taken from Zaks model
+    # Fitted quencher contribution factors
+    "gamma0": 0.1,  # slow quenching of Vx present despite lack of protonation
+    "gamma1": 1,  # CHANGED - fast quenching present due to the protonation
+    "gamma2": 8,  # slow quenching of Zx present despite lack of protonation
+    "gamma3": 2,  # fastest possible quenching
+    # KEA3 parameters
+    "pK_KEA3": 6.75,  # Fitted
+    "k_KEA3": 5,  # modified to adjust with the new stoi
+    "K_lumen_conc_initial": 0.1,  # M From Meng Li model
+    "K_stroma_conc_initial": 0.1,  # M From Meng Li model
+    "ATP_thres_KEA3": 20.5,  # Fitted
+    "c": 0.1,
+    # Physical constants
+    "F": 96.485,  # unchanged Faraday constant
+    "R": 8.3e-3,  # unchanged universal gas constant
+    "T": 298.0,  # unchanged Temperature in K - for now assumed to be constant at 25 C
+    # Standard potentials and DeltaG0_ATP
+    "E0QAQAm": -0.140,  # unchanged
+    "E0PQPQH2": 0.354,  # unchanged
+    "E0PCPCm": 0.380,  # unchanged
+    "DeltaG0_ATP": 30.6,  # unchanged [kJ/mol / RT]
+    # Other constant
+    "e": 2.71828,  # constant
+    "lumen_volume_per_area_membrane": 0.0014,
+    "stroma_volume_per_area_membrane": 0.0112,
+    "molChl_per_area_membrane": 350e-6,
+    "thylakoid_membrane_capacitance": 0.6e-2,  # F/m^2
+    "pHlumen_init": 7.2,  # Assumed initial pH condition
+}
 
 
 def _divide_negative(
@@ -97,87 +177,6 @@ def _mass_action2_rev(
     forward = kf * s1 * s2
     reverse = kf / keq * p1 * p2
     return forward - reverse
-
-
-par = {
-    # Pool sizes
-    "PSIItot": 2.5,  # unchanged [mmol/molChl] total concentration of PSII
-    "PQtot": 20.0,  # unchanged [mmol/molChl]
-    "APtot": 50.0,  # unchanged [mmol/molChl] Bionumbers ~2.55mM (=81mmol/molChl)
-    "PsbStot": 1,  # [relative] LHCs that get phosphorylated and protonated
-    "Xtot": 1.0,  # unchanged [relative] xanthophylls
-    "O2ex": 8.0,  # unchanged external oxygen, kept constant, corresponds to 250 microM, corr. to 20%
-    "Pi": 0.01,  # unchanged
-    # Rate constants and key parameters
-    # Cytb6f
-    n.k(
-        "b6f"
-    ): 0.22,  # unchanged a rough estimate of the transfer from PQ to cyt that is equal to ~ 10ms
-    "pKreg": 6.4,  # pKa of pH inihibition of Cytb6f
-    # ATPsynthase
-    "kActATPase": 0.01,  # unchanged parameter relating the rate constant of activation of the ATPase in the light
-    "kDeactATPase": 0.002,  # unchanged parameter relating the deactivation of the ATPase at night
-    "kATPsynthase": 20.0,  # unchanged
-    "kATPconsumption": 10.0,  # unchanged
-    "HPR": 14.0 / 3.0,  # unchanged
-    "pKE0": 7.211142552636095,  # fitted value for ATPsynthase pmf regulation
-    "b": 3.1924977471697407,  # fitted value for ATPsynthase pmf regulation
-    # PQ pool
-    "kPQH2": 250.0,  # unchanged [1/(s*(mmol/molChl))]
-    "kPTOX": 0.01,  # unchanged
-    # PSII
-    "kH_Qslope": 5e9,
-    "kH0": 5e8,  # Andre assumption
-    "kF": 6.25e8,  # unchanged fluorescence 16ns
-    "kP": 6939318750.0,  # Fitted
-    # Proton
-    n.ph_stroma: 7.8,  # unchanged [1/s] leakage rate
-    "kleak": 1000.0,  # unchanged
-    "bH": 100,  # unchanged proton buffer: ratio total / free protons
-    # Parameter associated with xanthophyll cycle
-    "kDeepoxV": 0.00096,  # Fitted
-    "kEpoxZ": 0.0013824,  # Fitted
-    "KphSatZ": 5.8,  # Taken from Zaks model
-    # [-] half-saturation pH value for activity de-epoxidase, highest activity at ~pH 5.8
-    "KZsat": 0.65,  # [-], half-saturation constant (relative conc. of Z) for quenching of Z
-    "nHX": 5.0,  # unchanged, the cooperativity, hill-coefficient for activity of de-epoxidase
-    "nHZ": 3.0,
-    # Parameter associated with PsbS protonation
-    "nHL": 3,
-    "kDeprot": 0.0336,  # Fitted
-    "kProt": 0.07392,  # Fitted
-    "KphSatLHC": 5.8,  # Taken from Zaks model
-    # Fitted quencher contribution factors
-    "gamma0": 0.1,  # slow quenching of Vx present despite lack of protonation
-    "gamma1": 1,  # CHANGED - fast quenching present due to the protonation
-    "gamma2": 8,  # slow quenching of Zx present despite lack of protonation
-    "gamma3": 2,  # fastest possible quenching
-    # KEA3 parameters
-    "pK_KEA3": 6.75,  # Fitted
-    "k_KEA3": 5,  # modified to adjust with the new stoi
-    "K_lumen_conc_initial": 0.1,  # M From Meng Li model
-    "K_stroma_conc_initial": 0.1,  # M From Meng Li model
-    "ATP_thres_KEA3": 20.5,  # Fitted
-    "c": 0.1,
-    # Physical constants
-    "F": 96.485,  # unchanged Faraday constant
-    "R": 8.3e-3,  # unchanged universal gas constant
-    "T": 298.0,  # unchanged Temperature in K - for now assumed to be constant at 25 C
-    # Standard potentials and DeltaG0_ATP
-    "E0QAQAm": -0.140,  # unchanged
-    "E0PQPQH2": 0.354,  # unchanged
-    "E0PCPCm": 0.380,  # unchanged
-    "DeltaG0_ATP": 30.6,  # unchanged [kJ/mol / RT]
-    # Other constant
-    "e": 2.71828,  # constant
-    "lumen_volume_per_area_membrane": 0.0014,
-    "stroma_volume_per_area_membrane": 0.0112,
-    "molChl_per_area_membrane": 350e-6,
-    "thylakoid_membrane_capacitance": 0.6e-2,  # F/m^2
-    "pHlumen_init": 7.2,  # Assumed initial pH condition
-    # PFD
-    n.light: 200.0,
-}
 
 
 def _mmol_to_conc(
@@ -708,45 +707,22 @@ def get_nguyen2026_tomato() -> Model:
 
     m.add_variables(
         {
-            n.b0(): 2.5,
-            n.b1(): 0,
-            n.b2(): 0,
-            "PQH2": 0.0,
-            "ATP": 25.0,
-            n.h_lumen: InitialAssignment(
-                fn=_calculate_p_hinv,
-                args=[
-                    "pHlumen_init",
-                    "lumen_volume_per_area_membrane",
-                    "molChl_per_area_membrane",
-                ],
-            ),
-            n.delta_psi: InitialAssignment(
-                fn=_initial_delta_psi, args=[n.delta_ph, "R", "T", "F"]
-            ),
-            "Vx": 1.0,
-            "PsbS": 1.0,
-            "ATPactivity": 0.1,
-            n.k_lumen: InitialAssignment(
-                fn=_conc_to_mmol,
-                args=[
-                    "K_lumen_conc_initial",
-                    "lumen_volume_per_area_membrane",
-                    "molChl_per_area_membrane",
-                ],
-            ),
-            n.k_stroma: InitialAssignment(
-                fn=_conc_to_mmol,
-                args=[
-                    "K_stroma_conc_initial",
-                    "stroma_volume_per_area_membrane",
-                    "molChl_per_area_membrane",
-                ],
-            ),
+            "B0": 1.9587919653281205,
+            "B1": 5.308607566760226e-08,
+            "B2": 0.5412079539026975,
+            "PQH2": 14.753583247530687,
+            "ATP": 23.681707158359565,
+            "H_lumen": 0.004056077821448256,
+            "delta_psi": 0.02512099319259713,
+            "Vx": 0.9500845858289113,
+            "PsbS": 0.6863197475682336,
+            "ATPactivity": 1.0,
+            "K_lumen": 400.0,
+            "K_stroma": 3200.0,
         }
     )
 
-    m.add_parameters(par)
+    m.add_parameters(parameters)
 
     m.add_derived(
         "RT",
