@@ -9,7 +9,7 @@ but written as single, flat files to make inspection easier.
 from mxlpy import Simulator, fit, mc, mca, plot, scan
 
 from . import data
-from .dyn_entro import get_dynamic_enterobactin
+from .dynamic_enterobactin import get_dynamic_enterobactin
 from .ebeling2026 import get_ebeling_2026
 from .elowitz2000_repressilator import get_elowitz2000_repressilator
 from .lotka_volterra_v1 import get_lotka_volterra_v1
