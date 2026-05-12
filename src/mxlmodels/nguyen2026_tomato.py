@@ -5,13 +5,13 @@ Rewritten for better implentation
 """
 
 import numpy as np
-from mxlpy import Derived, Model
+from mxlpy import Derived, InitialAssignment, Model
 
 import mxlmodels._names as n
 
 parameters = {
     # PFD
-    n.light: 200.0,
+    n.light: 10.0,
     # Pool sizes
     "PSIItot": 2.5,  # unchanged [mmol/molChl] total concentration of PSII
     "PQtot": 20.0,  # unchanged [mmol/molChl]
@@ -269,10 +269,14 @@ def _keq_cytb6f(
 
     Adjusted from Matuszynska et al 2019 - calculated from pmf instead of deltapH
     """
-    DG1 = -2 * f * e0_pq
-    DG2 = -f * e0_pc
-    DG = -(DG1 + 2 * (np.log(10) * r * t) * p_hlumen) + 2 * DG2 + 2 * f * pmf
-    return np.exp(-DG / (r * t))
+    return np.exp(
+        -(
+            -((-2 * f * e0_pq) + 2 * (np.log(10) * r * t) * p_hlumen)
+            + 2 * (-f * e0_pc)
+            + 2 * f * pmf
+        )
+        / (r * t)
+    )
 
 
 def _keq_at_psyn(
@@ -705,18 +709,41 @@ def get_nguyen2026_tomato() -> Model:
 
     m.add_variables(
         {
-            "B0": 1.9587919653281205,
-            "B1": 5.308607566760226e-08,
-            "B2": 0.5412079539026975,
-            "PQH2": 14.753583247530687,
-            "ATP": 23.681707158359565,
-            "H_lumen": 0.004056077821448256,
-            "delta_psi": 0.02512099319259713,
-            "Vx": 0.9500845858289113,
-            "PsbS": 0.6863197475682336,
-            "ATPactivity": 1.0,
-            "K_lumen": 400.0,
-            "K_stroma": 3200.0,
+            n.b0(): 2.5,
+            n.b1(): 0,
+            n.b2(): 0,
+            "PQH2": 0.0,
+            "ATP": 25.0,
+            n.h_lumen: InitialAssignment(
+                fn=_calculate_p_hinv,
+                args=[
+                    "pHlumen_init",
+                    "lumen_volume_per_area_membrane",
+                    "molChl_per_area_membrane",
+                ],
+            ),
+            n.delta_psi: InitialAssignment(
+                fn=_initial_delta_psi, args=[n.delta_ph, "R", "T", "F"]
+            ),
+            "Vx": 1.0,
+            "PsbS": 1.0,
+            "ATPactivity": 0.1,
+            n.k_lumen: InitialAssignment(
+                fn=_conc_to_mmol,
+                args=[
+                    "K_lumen_conc_initial",
+                    "lumen_volume_per_area_membrane",
+                    "molChl_per_area_membrane",
+                ],
+            ),
+            n.k_stroma: InitialAssignment(
+                fn=_conc_to_mmol,
+                args=[
+                    "K_stroma_conc_initial",
+                    "stroma_volume_per_area_membrane",
+                    "molChl_per_area_membrane",
+                ],
+            ),
         }
     )
 
