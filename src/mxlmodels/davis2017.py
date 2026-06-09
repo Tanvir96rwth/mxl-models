@@ -1,5 +1,14 @@
 """Davis 2017 model of pmf-induced photosystem II photodamage.
 
+|  |  |
+| --- | --- |
+| doi | 10.7554/eLife.16921 |
+| main author | Geoffry A. Davis |
+| paper title | Limitations to photosynthesis by proton motive force-induced photosystem II photodamage |
+| published | October 2016 |
+| journal | eLife |
+| organism | higher plants (thylakoid) |
+
 A mechanistic model of the photosynthetic electron transport chain and thylakoid
 proton motive force (pmf) that resolves the pmf into its two thermodynamically
 distinct components: the transmembrane electric field (Dpsi) and the lumen pH
@@ -13,11 +22,6 @@ charge separation across the membrane build the pmf, which drives ATP synthase.
 Counter-ion fluxes (KEA3 K+/H+ antiport, VKC K+ channel) partition the pmf
 between Dpsi and delta_pH. NPQ is modelled via PsbS protonation and the
 xanthophyll cycle (violaxanthin <-> zeaxanthin).
-
-Reference: Davis, Geoffry A., et al.
-"Limitations to photosynthesis by proton motive force-induced photosystem II
-photodamage."
-eLife 5 (2016): e16921. https://doi.org/10.7554/eLife.16921
 """
 
 import numpy as np

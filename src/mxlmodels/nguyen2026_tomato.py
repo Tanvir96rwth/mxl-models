@@ -1,7 +1,16 @@
 """NPQ model for tomato.
 
-Adapted from the original NPQ model for Arabidopsis - without the light conversion fn
-Rewritten for better implentation
+|  |  |
+| --- | --- |
+| doi | tbd |
+| main author | tbd |
+| paper title | tbd |
+| published | tbd |
+| journal | tbd |
+| organism | tomato (Solanum lycopersicum) |
+
+Adapted from the original NPQ model for Arabidopsis - without the light conversion fn.
+Rewritten for better implementation.
 """
 
 import numpy as np

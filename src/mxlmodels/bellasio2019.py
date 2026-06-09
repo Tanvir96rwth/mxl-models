@@ -1,4 +1,13 @@
-"""Bellassio 2019 model.
+"""Bellasio 2019 model.
+
+|             |                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| doi         | 10.1007/s11120-018-0601-1                                                                                              |
+| main author | Chandra Bellasio                                                                                                       |
+| paper title | A generalised dynamic model of leaf-level C3 photosynthesis combining light and dark reactions with stomatal behaviour |
+| published   | January 2019                                                                                                           |
+| journal     | Photosynthesis Research                                                                                                |
+| organism    | C3 leaf                                                                                                                |
 
 The [Bellasio2019](https://doi.org/10.1007/s11120-018-0601-1) model is a
 generalized C3 leaf-photosynthesis model that includes simplified

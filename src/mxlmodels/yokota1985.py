@@ -1,8 +1,13 @@
 """Yokota 1985 photorespiratory carbon oxidation cycle model.
 
-Reference: Yokota, Akiho, Hiroshi Komura, and Shozaburo Kitaoka.
-"Refixation of photorespired CO2 during photosynthesis in Euglena gracilis Z."
-Agricultural and biological chemistry 49.11 (1985): 3309-3310.
+|  |  |
+| --- | --- |
+| doi | 10.1080/00021369.1985.10867259 |
+| main author | Akiho Yokota |
+| paper title | Refixation of Photorespired CO2 during Photosynthesis in Euglena gracilis z |
+| published | 1985 |
+| journal | Agricultural and Biological Chemistry |
+| organism | Euglena gracilis |
 """
 
 from mxlpy import Model

@@ -1,8 +1,13 @@
-"""Lazar 1997 Fluorescence induction
-Reference: Lazár, D., Nauš, J., Matoušková, M., & Flašarová, M.
-"Mathematical modeling of changes in chlorophyll fluorescence induction caused
-by herbicides."
-Pesticide Biochemistry and Physiology, 57(3), 200-210.
+"""Lazar 1997 Fluorescence induction model.
+
+|  |  |
+| --- | --- |
+| doi | 10.1006/pest.1997.2277 |
+| main author | Dušan Lazár |
+| paper title | Mathematical modeling of changes in chlorophyll fluorescence induction caused by herbicides |
+| published | 1997 |
+| journal | Pesticide Biochemistry and Physiology |
+| organism | plants (chlorophyll fluorescence) |
 """
 
 from mxlpy import Model

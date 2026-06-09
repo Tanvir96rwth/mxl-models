@@ -1,8 +1,13 @@
 """Matuszynska 2016 NPQ model: non-photochemical quenching via PsbS and xanthophyll cycle.
 
-Reference: Matuszyńska, Anna, et al.
-"A mathematical model of non-photochemical quenching to study short-term light memory in plants."
-Biochimica et Biophysica Acta (BBA)-Bioenergetics 1857.12 (2016): 1860-1869
+|  |  |
+| --- | --- |
+| doi | 10.1016/j.bbabio.2016.09.003 |
+| main author | Anna Matuszyńska |
+| paper title | A mathematical model of non-photochemical quenching to study short-term light memory in plants |
+| published | September 2016 |
+| journal | Biochimica et Biophysica Acta (BBA) - Bioenergetics |
+| organism | Arabidopsis thaliana |
 """
 
 import numpy as np

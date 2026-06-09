@@ -1,10 +1,14 @@
 """Poolman 2000 Calvin-Benson-Bassham cycle model.
 
-Reference: Poolman, Mark G., David A. Fell, and Simon Thomas.
-"Modelling photosynthesis and its control."
-Journal of experimental botany 51.suppl_1 (2000): 319-328
-DOI: 10.1093/jxb/erh090
-biomodels: https://www.biomodels.org/BIOMD0000000013
+|  |  |
+| --- | --- |
+| doi | 10.1093/jexbot/51.suppl_1.319 |
+| main author | Mark G. Poolman |
+| paper title | Modelling photosynthesis and its control |
+| published | February 2000 |
+| journal | Journal of Experimental Botany |
+| organism | C3 plant (chloroplast) |
+| biomodels | BIOMD0000000013 |
 """
 
 from mxlpy import Model

@@ -1,6 +1,14 @@
 """Ebeling 2026 extended chloroplast model with ion transport, ROS, and Calvin cycle.
 
-Reference: tbd
+|             |             |
+| ----------- | ----------- |
+| doi         | tbd         |
+| main author | tbd         |
+| paper title | tbd         |
+| published   | tbd         |
+| journal     | tbd         |
+| organism    | chloroplast |
+
 """
 
 import math

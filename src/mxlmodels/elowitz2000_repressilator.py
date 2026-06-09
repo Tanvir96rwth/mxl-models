@@ -1,10 +1,14 @@
 """Repressilator (Elowitz 2000): synthetic genetic oscillator with three cyclically repressing genes.
 
-Reference: Elowitz, M. B. and Leibler, S.
-"A synthetic oscillatory network of transcriptional regulators."
-Nature 403 (2000): 335-338.
-DOI: 10.1038/35002125
-biomodels: https://www.biomodels.org/BIOMD0000000012
+|  |  |
+| --- | --- |
+| doi | 10.1038/35002125 |
+| main author | Michael B. Elowitz |
+| paper title | A synthetic oscillatory network of transcriptional regulators |
+| published | January 2000 |
+| journal | Nature |
+| organism | Escherichia coli (synthetic circuit) |
+| biomodels | BIOMD0000000012 |
 """
 
 from mxlpy import Model

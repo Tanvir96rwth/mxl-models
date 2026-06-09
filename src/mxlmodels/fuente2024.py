@@ -1,5 +1,14 @@
 """Fuente 2024 model.
 
+|             |                                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| doi         | 10.1016/j.plaphy.2024.109138                                                                                         |
+| main author | David Fuente                                                                                                         |
+| paper title | A mathematical model to simulate the dynamics of photosynthetic light reactions under harmonically oscillating light |
+| published   | September 2024                                                                                                       |
+| journal     | Plant Physiology and Biochemistry                                                                                    |
+| organism    | Chlamydomonas reinhardtii                                                                                            |
+
 The Fuente2024 model is a kinetic model of photosynthesis designed
 according to Occam's razor, aiming to capture the core processes of
 photosynthesis with minimal complexity. The model focuses on responses

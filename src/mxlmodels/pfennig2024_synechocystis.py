@@ -1,11 +1,13 @@
 """Pfennig 2024 cyanobacteria model.
 
-Reference: Tobias Pfennig, Elena Kullmann, Tomáš Zavřel, Andreas Nakielski, \
-Oliver Ebenhöh, Jan Červený, Gábor Bernát, Anna Barbara Matuszyńska
-"Shedding light on blue-green photosynthesis: A wavelength-dependent mathematical model\
-of photosynthesis in Synechocystis sp. PCC 6803"
-PLOS Computational Biology 20.9 (2024): e1012445.
-doi: 10.1371/journal.pcbi.1012445
+|  |  |
+| --- | --- |
+| doi | 10.1371/journal.pcbi.1012445 |
+| main author | Tobias Pfennig |
+| paper title | Shedding light on blue-green photosynthesis: A wavelength-dependent mathematical model of photosynthesis in Synechocystis sp. PCC 6803 |
+| published | September 2024 |
+| journal | PLOS Computational Biology |
+| organism | Synechocystis sp. PCC 6803 |
 
 Terms
 -----

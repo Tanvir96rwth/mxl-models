@@ -1,5 +1,14 @@
 """Simple Calvin Cycle model from Zhu et al. (2009).
 
+|             |                                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| doi         | 10.1016/j.nonrwa.2008.01.021                                                                                             |
+| main author | Xin-Guang Zhu                                                                                                            |
+| paper title | A simple model of the Calvin cycle has only one physiologically feasible steady state under the same external conditions |
+| published   | June 2009                                                                                                                |
+| journal     | Nonlinear Analysis: Real World Applications                                                                              |
+| organism    | C3 plant (Calvin cycle)                                                                                                  |
+
 Note: dynamics do not yet perfectly reproduce the published figures.
 """
 

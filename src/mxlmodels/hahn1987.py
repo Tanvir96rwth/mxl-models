@@ -1,8 +1,22 @@
-"""Hahn 1987 Photorespiration and Photosynthesis model
-Reference: Hahn, Brian D.
-"A mathematical model of photorespiration and photosynthesis."
-Annals of Botany, 1987, 60. Jg., Nr. 2, S. 157-169.
-DOI: https://doi.org/10.1093/oxfordjournals.aob.a087432
+"""Hahn 1987 Photorespiration and Photosynthesis model.
+
+|             |                                                             |
+| ----------- | ----------------------------------------------------------- |
+| doi         | 10.1093/oxfordjournals.aob.a087432                          |
+| main author | Brian D. Hahn                                               |
+| paper title | A Mathematical Model of Photorespiration and Photosynthesis |
+| published   | August 1987                                                 |
+| journal     | Annals of Botany                                            |
+| organism    | C3 leaf                                                     |
+
+A comprehensive model of C3 leaf carbon metabolism combining the Calvin cycle
+with the glycolate and glycerate pathways of photorespiration, formulated as a
+system of non-linear differential equations. It extends Hahn's earlier
+Calvin-cycle models (1984, 1986) by adding the competitive inhibition of
+ribulose-bisphosphate carboxylase by oxygen. The model reaches an effectively
+stable steady state and behaves realistically when external CO2 and O2
+concentrations are varied: photosynthesis is inhibited by higher oxygen levels,
+while photorespiration is inhibited by higher carbon dioxide levels.
 """
 
 from mxlpy import Model

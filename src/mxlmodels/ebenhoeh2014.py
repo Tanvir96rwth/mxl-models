@@ -1,5 +1,14 @@
 """Ebenhoeh 2014 photosynthetic electron transport chain (PETC) model.
 
+|             |                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------ |
+| doi         | 10.1098/rstb.2013.0223                                                                                       |
+| main author | Oliver Ebenhöh                                                                                               |
+| paper title | Short-term acclimation of the photosynthetic electron transfer chain to changing light: a mathematical model |
+| published   | March 2014                                                                                                   |
+| journal     | Philosophical Transactions of the Royal Society B                                                            |
+| organism    | Chlamydomonas reinhardtii                                                                                    |
+
 Core dynamic model of the thylakoid electron transport chain used to study
 short-term light acclimation (state transitions) in *Chlamydomonas*. Covers
 PSII/PSI, cytochrome b6f, FNR, ATP synthase, cyclic electron flow, PTOX/NDH and
@@ -9,13 +18,6 @@ ATP and NADPH are consumed by lumped linear sinks instead of a Calvin cycle.
 
 This is the aerobic (constant oxygen supply) configuration; the anoxia switch of
 the original code is not reproduced.
-
-Reference: Ebenhoeh, Oliver, Geoffrey Fucile, Giovanni Finazzi,
-Jean-David Rochaix, and Michel Goldschmidt-Clermont.
-"Short-term acclimation of the photosynthetic electron transfer chain to
-changing light: a mathematical model."
-Philosophical Transactions of the Royal Society B 369.1640 (2014): 20130223.
-doi:10.1098/rstb.2013.0223
 """
 
 import math

@@ -1,13 +1,18 @@
 """Matuszynska 2016 PhD photosynthesis model.
 
+|  |  |
+| --- | --- |
+| doi | tbd |
+| main author | Anna Barbara Matuszyńska |
+| paper title | Mathematical models of light acclimation mechanisms in higher plants and green algae |
+| published | 2016 |
+| journal | PhD dissertation, Heinrich-Heine-Universität Düsseldorf |
+| organism | higher plants and green algae |
+
 Full chloroplast electron transport chain with non-photochemical quenching (NPQ)
 and LHC state transitions. Covers PSII/PSI, cytochrome b6f, FNR, ATP synthase,
 the xanthophyll cycle (violaxanthin ↔ zeaxanthin), PsbS protonation, and
 cyclic electron flow around PSI.
-
-Reference: Matuszyńska, Anna Barbara.
-Mathematical models of light acclimation mechanisms in higher plants and green algae.
-Dissertation, Düsseldorf, Heinrich-Heine-Universität, 2016.
 """
 
 import math
