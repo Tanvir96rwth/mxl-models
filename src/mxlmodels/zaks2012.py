@@ -2,21 +2,22 @@
 Complete mxlpy port of the Zaks et al. photosynthesis model.
 
 Sections:
-  F1  – PSII (antenna + reaction centre)
-  F2  – qE / xanthophyll cycle
-  F3  – PQ pool (QB site + plastoquinone)
-  F4  – Cytochrome b6f
-  F5  – PSI
-  F7  – ATP synthase
-  F8  – Lumen ion fluxes (Mg, Cl, K)
+  F1 - PSII (antenna + reaction centre)
+  F2 - qE / xanthophyll cycle
+  F3 - PQ pool (QB site + plastoquinone)
+  F4 - Cytochrome b6f
+  F5 - PSI
+  F7 - ATP synthase
+  F8 - Lumen ion fluxes (Mg, Cl, K)
 """
 
 import numpy as np
-from mxlpy import Model, Derived
+from mxlpy import Derived, Model
 
 # ---------------------------------------------------------------------------
 # Helper / rate functions
 # ---------------------------------------------------------------------------
+
 
 def protonation_fraction(ph: float, pKa: float, hill_n: float) -> float:
     return 1.0 / (1.0 + 10.0 ** (hill_n * (ph - pKa)))
@@ -71,6 +72,7 @@ def efield_slowdown(alpha: float, delta_psi: float, voltsperlog: float) -> float
 def flux_to_concentration_lumen(lumenVolumePerArea: float) -> float:
     return 1.0 / lumenVolumePerArea
 
+
 def atpsyn_proton_stoi(lumenVolumePerArea: float) -> float:
     return -1.0 / lumenVolumePerArea
 
@@ -82,15 +84,9 @@ def ion_flux_linear(
     permeability: float,
     voltsperlog: float,
 ) -> float:
-    flowout = float(delta_mu > 0)
     liters_per_cc = 1e-3
-    return (
-        -(lumen_conc * flowout + stroma_conc * (1.0 - flowout))
-        * liters_per_cc
-        * permeability
-        * delta_mu
-        / voltsperlog
-    )
+    conc = lumen_conc if delta_mu > 0 else stroma_conc
+    return -conc * liters_per_cc * permeability * delta_mu / voltsperlog
 
 
 def total_q(
@@ -131,7 +127,9 @@ def mass_action_1s_act(kf: float, act: float, s: float) -> float:
 
 # PSII-specific rates
 def v7(kEETLHP680QAox, kEETLHP680QAred, chl_ex, qa_ox, qa_red, p680_neut):
-    return (kEETLHP680QAox * chl_ex * qa_ox + kEETLHP680QAred * chl_ex * qa_red) * p680_neut
+    return (
+        kEETLHP680QAox * chl_ex * qa_ox + kEETLHP680QAred * chl_ex * qa_red
+    ) * p680_neut
 
 
 def v8(kEETLHP680revQAox, kEETLHP680revQAred, p680_ex, qa_ox, qa_red):
@@ -155,7 +153,13 @@ def v17(kP680QArecombination, p680_plus, qa_red, phe_neut, efield_slowdown_r):
 
 
 def v18(kP680QArecombinationClosedRC, p680_plus, qa_red, phe_anion, efield_slowdown_r):
-    return kP680QArecombinationClosedRC * p680_plus * qa_red * phe_anion / efield_slowdown_r
+    return (
+        kP680QArecombinationClosedRC
+        * p680_plus
+        * qa_red
+        * phe_anion
+        / efield_slowdown_r
+    )
 
 
 # Cyt b6f
@@ -174,11 +178,14 @@ def fraction_active_pc(pcr, PCperPSI):
 def r_cyt(QReoxidationRate, frac_active_cyt, frac_active_pc, frac_pq_red):
     return QReoxidationRate * frac_active_cyt * frac_active_pc * frac_pq_red
 
+
 def r_q2(kETQAtoQB1, QAred, QBneut, esq) -> float:
     return kETQAtoQB1 * QAred * QBneut * esq
 
+
 def r_q3(kETQAtoQB2, QAred, QBred1, esq) -> float:
     return kETQAtoQB2 * QAred * QBred1 * esq
+
 
 def r_q8(rate, pqh2frac) -> float:
     return rate * pqh2frac / 10.0
@@ -196,10 +203,13 @@ def cyt_proton_stoi(Na, LumenVolume):
 def cyt_electron_stoi(ElectronsPerPC):
     return 2.0 / ElectronsPerPC
 
+
 # PSI
+
 
 def psi_1(kETPCP700, PCr, P700ox) -> float:
     return max(kETPCP700 * PCr * P700ox, 0.0)
+
 
 def psi_2(light, PSIcrossSection, kETP700Fdx, P700r, Fdxox) -> float:
     return max(light * PSIcrossSection * kETP700Fdx * P700r * Fdxox, 0.0)
@@ -208,29 +218,41 @@ def psi_2(light, PSIcrossSection, kETP700Fdx, P700r, Fdxox) -> float:
 # ATP synthase
 def proton_flux_atp(ATPConductivity, pmf, thresholdpmf, active_atps):
     diff = pmf - thresholdpmf
-    return ATPConductivity * diff * float(diff > 0) * active_atps
+    if diff <= 0:
+        return 0.0
+    return ATPConductivity * diff * active_atps
 
 
 def proton_flux_leak(leakConductivity, pmf, leakpmf):
     diff = pmf - leakpmf
-    return leakConductivity * diff * float(diff > 0)
+    if diff <= 0:
+        return 0.0
+    return leakConductivity * diff
+
 
 def atp_stoi(Na, LumenVolume, lumenVolumePerArea, ATPperProton):
     return ATPperProton * Na * LumenVolume / lumenVolumePerArea
 
+
 # Ion fluxes → concentration change in lumen
-def lumen_ion_flux(lumen_conc, stroma_conc, dmu, permeability, voltsperlog, lumenVolumePerArea):
+def lumen_ion_flux(
+    lumen_conc, stroma_conc, dmu, permeability, voltsperlog, lumenVolumePerArea
+):
     flux = ion_flux_linear(lumen_conc, stroma_conc, dmu, permeability, voltsperlog)
     return flux / lumenVolumePerArea
+
 
 def same(x) -> float:
     return x
 
+
 def frac(x, xtot) -> float:
-    return x/xtot
+    return x / xtot
+
 
 def qb_moiety(qb_n, qb_r1, qb_r2) -> float:
     return 1.0 - qb_n - qb_r1 - qb_r2
+
 
 # Output
 
@@ -238,36 +260,55 @@ def qb_moiety(qb_n, qb_r1, qb_r2) -> float:
 def kF_rate(kF: float, chl_ex: float) -> float:
     return kF * chl_ex
 
+
 def kqE_rate(kQ: float, chl_ex: float, q_total: float) -> float:
     return kQ * chl_ex * q_total
 
-def kPC_rate(kEETLHP680QAox: float, kEETLHP680QAred: float,
-             chl_ex: float, qa_ox: float, qa_red: float, p680_neut: float) -> float:
-    return (kEETLHP680QAox * chl_ex * qa_ox + kEETLHP680QAred * chl_ex * qa_red) * p680_neut
 
-def kPCRCC_rate(kEETLHP680QAox: float, kEETLHP680QAred: float,
-                chl_ex: float, p680_neut: float) -> float:
+def kPC_rate(
+    kEETLHP680QAox: float,
+    kEETLHP680QAred: float,
+    chl_ex: float,
+    qa_ox: float,
+    qa_red: float,
+    p680_neut: float,
+) -> float:
+    return (
+        kEETLHP680QAox * chl_ex * qa_ox + kEETLHP680QAred * chl_ex * qa_red
+    ) * p680_neut
+
+
+def kPCRCC_rate(
+    kEETLHP680QAox: float, kEETLHP680QAred: float, chl_ex: float, p680_neut: float
+) -> float:
     # Open-RC reference: QAox=1, QAred=0
     return (kEETLHP680QAox * chl_ex * 1.0 + kEETLHP680QAred * chl_ex * 0.0) * p680_neut
 
-def kC_rate(kNRantenna: float, chl_ex: float, kF_val: float,
-            kquenchP680plus: float, p680_plus: float) -> float:
+
+def kC_rate(
+    kNRantenna: float,
+    chl_ex: float,
+    kF_val: float,
+    kquenchP680plus: float,
+    p680_plus: float,
+) -> float:
     return kNRantenna * chl_ex + kF_val + kquenchP680plus * chl_ex * p680_plus
+
 
 def allrates_sum(kC: float, kPC: float, kqE: float) -> float:
     return kC + kPC + kqE
 
+
 def allratesRCC_sum(kC: float, kPCRCC: float, kqE: float) -> float:
     return kC + kPCRCC + kqE
 
+
 def safe_ratio(numerator: float, denominator: float) -> float:
-    eps = np.finfo(float).eps
-    if not np.isfinite(denominator) or abs(denominator) < eps:
-        return 1
+    # eps = np.finfo(float).eps
+    # if not np.isfinite(denominator) or abs(denominator) < eps:
+    #     return 1
     return numerator / denominator
 
-# def fluorescenceyieldRCC(kF_rate: float, kC_rate: float, kPC_rate: float, kqE_rate: float) -> float:
-#     return kF_rate /(kC_rate + kPC_rate + kqE_rate )
 
 # ---------------------------------------------------------------------------
 # Parameters & initial conditions
@@ -355,8 +396,7 @@ PARAMS = {
     "qtrigg1": 1.0,
     "qtrigg2": 0.0,
     "qtrigg3": 1.0,
-
-    #Additional pars
+    # Additional pars
     "ATPConductivityReverse": 1e-10,
     "ATPperPSI": 600.0,
     "CytRegulateYesNO": 1.0,
@@ -380,57 +420,42 @@ PARAMS = {
     "tHop": 1.7e-11,
     "tauCS": 5.5e-12,
     "tauqE": 1e-11,
-
-    "ATPperProton":3/12,
+    "ATPperProton": 3 / 12,
 }
 
 VARS = {
     "ATP": 2.0,
     "ActiveATPs": 0.05,
-    
     "Antheraxanthin": 1e-14,
-    
     "Fdxox": 1.0,
     "Fdxr": 1e-14,
-    
     "LumenCl": 0.01,
     "LumenK": 0.01,
     "LumenMg": 0.01,
     "LumenProtons": 1e-14,
-    
     "P680ex": 1e-14,
     "P680plus": 1e-14,
-    
     "P700ox": 1e-14,
     "P700r": 1.0,
-    
     "PCr": 0.2,
-
     "PQ": 8.999,
     "PQH2": 0.001,
-    
     "PSIIChlEx": 1e-14,
-    
     "PheAnion": 1e-14,
-    
     "PsbSQ": 1e-14,
-    
     "QAox": 1,
-    
     "QBneut": 1,
     "QBred1": 1e-7,
     "QBred2": 1e-7,
-
     "Thrdx": 1e-14,
-    
     "TotalLEF": 1e-14,
-    
     "Zeaxanthin": 1e-14,
 }
 
 # ---------------------------------------------------------------------------
 # Model builder
 # ---------------------------------------------------------------------------
+
 
 def get_zaks2012() -> Model:
     m = Model()
@@ -442,53 +467,107 @@ def get_zaks2012() -> Model:
     # ------------------------------------------------------------------
 
     # pH
-    m.add_derived("pH_stroma", get_pH,
-                  args=["pHStromaStart", "bufferCapacityStroma", "StromaProtonsStart"])
-    m.add_derived("pH_lumen", get_pH,
-                  args=["pHLumenStart", "bufferCapacityLumen", "LumenProtons"])
+    m.add_derived(
+        "pH_stroma",
+        get_pH,
+        args=["pHStromaStart", "bufferCapacityStroma", "StromaProtonsStart"],
+    )
+    m.add_derived(
+        "pH_lumen", get_pH, args=["pHLumenStart", "bufferCapacityLumen", "LumenProtons"]
+    )
 
     # Electric field / pmf
-    m.add_derived("total_charge_lumen", totalcharge,
-                  args=["LumenProtons", "zCl", "LumenCl", "zK", "LumenK", "zMg", "LumenMg"])
-    m.add_derived("total_charge_stroma", totalcharge,
-                  args=["StromaProtonsStart", "zCl", "StromaClStart", "zK", "StromaKStart",
-                        "zMg", "StromaMgStart"])
-    m.add_derived("deltapsi", delta_psi,
-                  args=["total_charge_lumen", "total_charge_stroma",
-                        "Fconst", "lumenVolumePerArea", "MembraneCapacitance"])
+    m.add_derived(
+        "total_charge_lumen",
+        totalcharge,
+        args=["LumenProtons", "zCl", "LumenCl", "zK", "LumenK", "zMg", "LumenMg"],
+    )
+    m.add_derived(
+        "total_charge_stroma",
+        totalcharge,
+        args=[
+            "StromaProtonsStart",
+            "zCl",
+            "StromaClStart",
+            "zK",
+            "StromaKStart",
+            "zMg",
+            "StromaMgStart",
+        ],
+    )
+    m.add_derived(
+        "deltapsi",
+        delta_psi,
+        args=[
+            "total_charge_lumen",
+            "total_charge_stroma",
+            "Fconst",
+            "lumenVolumePerArea",
+            "MembraneCapacitance",
+        ],
+    )
     m.add_derived("deltapH", delta_pH, args=["pH_stroma", "pH_lumen"])
     m.add_derived("pmf", pmf, args=["deltapH", "deltapsi", "voltsperlog"])
 
     # Ion electrochemical potentials
-    m.add_derived("deltamuCl", delta_mu,
-                  args=["zCl", "LumenCl", "StromaClStart", "deltapsi", "voltsperlog"])
-    m.add_derived("deltamuMg", delta_mu,
-                  args=["zMg", "LumenMg", "StromaMgStart", "deltapsi", "voltsperlog"])
-    m.add_derived("deltamuK", delta_mu,
-                  args=["zK", "LumenK", "StromaKStart", "deltapsi", "voltsperlog"])
+    m.add_derived(
+        "deltamuCl",
+        delta_mu,
+        args=["zCl", "LumenCl", "StromaClStart", "deltapsi", "voltsperlog"],
+    )
+    m.add_derived(
+        "deltamuMg",
+        delta_mu,
+        args=["zMg", "LumenMg", "StromaMgStart", "deltapsi", "voltsperlog"],
+    )
+    m.add_derived(
+        "deltamuK",
+        delta_mu,
+        args=["zK", "LumenK", "StromaKStart", "deltapsi", "voltsperlog"],
+    )
 
     # Electric-field slowdown factors
-    m.add_derived("efield_slowdown_r", efield_slowdown,
-                  args=["alphaRC", "deltapsi", "voltsperlog"])
-    m.add_derived("efield_slowdown_q", efield_slowdown,
-                  args=["alphaQ", "deltapsi", "voltsperlog"])
+    m.add_derived(
+        "efield_slowdown_r",
+        efield_slowdown,
+        args=["alphaRC", "deltapsi", "voltsperlog"],
+    )
+    m.add_derived(
+        "efield_slowdown_q", efield_slowdown, args=["alphaQ", "deltapsi", "voltsperlog"]
+    )
 
     # Xanthophyll & PsbS derived states
-    m.add_derived("Violaxanthin", V_from_AZ,
-                  args=["TotalXanthophyll", "Antheraxanthin", "Zeaxanthin"])
+    m.add_derived(
+        "Violaxanthin",
+        V_from_AZ,
+        args=["TotalXanthophyll", "Antheraxanthin", "Zeaxanthin"],
+    )
     m.add_derived("PsbS_unprot", complement, args=["PsbSQ"])
 
     # Enzyme activation states
-    m.add_derived("active_vde", protonation_fraction,
-                  args=["pH_lumen", "VDEpKa", "nVDE"])
-    m.add_derived("active_psbs", protonation_fraction,
-                  args=["pH_lumen", "PsbSpKa", "nPsbS"])
+    m.add_derived(
+        "active_vde", protonation_fraction, args=["pH_lumen", "VDEpKa", "nVDE"]
+    )
+    m.add_derived(
+        "active_psbs", protonation_fraction, args=["pH_lumen", "PsbSpKa", "nPsbS"]
+    )
     m.add_derived("deact_psbs", complement, args=["active_psbs"])
 
     # Quenching
-    m.add_derived("q_total", total_q,
-                  args=["Antheraxanthin", "Zeaxanthin", "PsbSQ",
-                        "zfrac", "PsbSDose", "qtrigg1", "qtrigg2", "qtrigg3"])
+    m.add_derived(
+        "q_total",
+        total_q,
+        args=[
+            "Antheraxanthin",
+            "Zeaxanthin",
+            "PsbSQ",
+            "zfrac",
+            "PsbSDose",
+            "qtrigg1",
+            "qtrigg2",
+            "qtrigg3",
+        ],
+    )
 
     # PSII moiety complements
     m.add_derived("QAred", moeity_frac, args=["QAox", "fracIntactRC"])
@@ -500,50 +579,58 @@ def get_zaks2012() -> Model:
     m.add_derived("QBempty", qb_moiety, args=["QBneut", "QBred1", "QBred2"])
 
     # Cyt b6f activity factors
-    m.add_derived("frac_active_cyt", fraction_active_cyt,
-                  args=["pH_lumen", "pKaC", "nC"])
+    m.add_derived(
+        "frac_active_cyt", fraction_active_cyt, args=["pH_lumen", "pKaC", "nC"]
+    )
     m.add_derived("frac_pq_red", fraction_pq_red, args=["PQH2", "PQ"])
     m.add_derived("frac_active_pc", fraction_active_pc, args=["PCr", "PCperPSI"])
     m.add_derived("InactiveATPs", complement, args=["ActiveATPs"])
 
-    #Output
+    # Output
     m.add_readout("light", same, args=["LightIntensity"])
 
-    m.add_readout("kF_obs", kF_rate,
-                  args=["kF", "PSIIChlEx"])
+    m.add_readout("kF_obs", kF_rate, args=["kF", "PSIIChlEx"])
 
-    m.add_readout("kqE_obs", kqE_rate,
-                  args=["kQ", "PSIIChlEx", "q_total"])
+    m.add_readout("kqE_obs", kqE_rate, args=["kQ", "PSIIChlEx", "q_total"])
 
-    m.add_readout("kPC_obs", kPC_rate,
-                  args=["kEETLHP680QAox", "kEETLHP680QAred",
-                        "PSIIChlEx", "QAox", "QAred", "P680neut"])
+    m.add_readout(
+        "kPC_obs",
+        kPC_rate,
+        args=[
+            "kEETLHP680QAox",
+            "kEETLHP680QAred",
+            "PSIIChlEx",
+            "QAox",
+            "QAred",
+            "P680neut",
+        ],
+    )
 
-    m.add_readout("kPCRCC_obs", kPCRCC_rate,
-                  args=["kEETLHP680QAox", "kEETLHP680QAred",
-                        "PSIIChlEx", "P680neut"])
+    m.add_readout(
+        "kPCRCC_obs",
+        kPCRCC_rate,
+        args=["kEETLHP680QAox", "kEETLHP680QAred", "PSIIChlEx", "P680neut"],
+    )
 
-    m.add_readout("kC_obs", kC_rate,
-                  args=["kNRantenna", "PSIIChlEx", "kF_obs",
-                        "kquenchP680plus", "P680plus"])
+    m.add_readout(
+        "kC_obs",
+        kC_rate,
+        args=["kNRantenna", "PSIIChlEx", "kF_obs", "kquenchP680plus", "P680plus"],
+    )
 
-    m.add_readout("allrates", allrates_sum,
-                  args=["kC_obs", "kPC_obs", "kqE_obs"])
+    m.add_readout("allrates", allrates_sum, args=["kC_obs", "kPC_obs", "kqE_obs"])
 
-    m.add_readout("allratesRCC", allratesRCC_sum,
-                  args=["kC_obs", "kPCRCC_obs", "kqE_obs"])
+    m.add_readout(
+        "allratesRCC", allratesRCC_sum, args=["kC_obs", "kPCRCC_obs", "kqE_obs"]
+    )
 
-    m.add_readout("fluorescenceyield", safe_ratio,
-                  args=["kF_obs", "allrates"])
+    m.add_readout("fluorescenceyield", safe_ratio, args=["kF_obs", "allrates"])
 
-    m.add_readout("fluorescenceyieldRCC", safe_ratio,
-                  args=["kF_obs", "allratesRCC"])
+    m.add_readout("fluorescenceyieldRCC", safe_ratio, args=["kF_obs", "allratesRCC"])
 
-    m.add_readout("qE_model", safe_ratio,
-                  args=["kqE_obs", "kC_obs"])
+    m.add_readout("qE_model", safe_ratio, args=["kqE_obs", "kC_obs"])
 
-    m.add_readout("phi_npq", safe_ratio,
-                  args=["kqE_obs", "allrates"])
+    m.add_readout("phi_npq", safe_ratio, args=["kqE_obs", "allrates"])
 
     # ------------------------------------------------------------------
     # F2 – Xanthophyll cycle & PsbS
@@ -629,16 +716,21 @@ def get_zaks2012() -> Model:
     m.add_reaction(
         "v7",
         fn=v7,
-        args=["kEETLHP680QAox", "kEETLHP680QAred",
-              "PSIIChlEx", "QAox", "QAred", "P680neut"],
+        args=[
+            "kEETLHP680QAox",
+            "kEETLHP680QAred",
+            "PSIIChlEx",
+            "QAox",
+            "QAred",
+            "P680neut",
+        ],
         stoichiometry={"PSIIChlEx": -1, "P680ex": 1},
     )
     # v8: back-transfer P680* → antenna
     m.add_reaction(
         "v8",
         fn=v8,
-        args=["kEETLHP680revQAox", "kEETLHP680revQAred",
-              "P680ex", "QAox", "QAred"],
+        args=["kEETLHP680revQAox", "kEETLHP680revQAred", "P680ex", "QAox", "QAred"],
         stoichiometry={"PSIIChlEx": 1, "P680ex": -1},
     )
     # v9: non-radiative decay of P680*
@@ -690,15 +782,26 @@ def get_zaks2012() -> Model:
     m.add_reaction(
         "v17",
         fn=v17,
-        args=["kP680QArecombination", "P680plus", "QAred", "Pheneut", "efield_slowdown_r"],
+        args=[
+            "kP680QArecombination",
+            "P680plus",
+            "QAred",
+            "Pheneut",
+            "efield_slowdown_r",
+        ],
         stoichiometry={"P680plus": -1, "QAox": 1},
     )
     # v18: P680+/QA⁻ recombination (Phe anion)
     m.add_reaction(
         "v18",
         fn=v18,
-        args=["kP680QArecombinationClosedRC", "P680plus", "QAred", "PheAnion",
-              "efield_slowdown_r"],
+        args=[
+            "kP680QArecombinationClosedRC",
+            "P680plus",
+            "QAred",
+            "PheAnion",
+            "efield_slowdown_r",
+        ],
         stoichiometry={"P680plus": -1, "QAox": 1},
     )
 
@@ -716,7 +819,7 @@ def get_zaks2012() -> Model:
     # r_q3: QA⁻ → QB⁻ (second reduction → PQH₂ at QB)
     m.add_reaction(
         "r_q3",
-        fn= r_q3,
+        fn=r_q3,
         args=["kETQAtoQB2", "QAred", "QBred1", "efield_slowdown_q"],
         stoichiometry={"QAox": 1, "QBred1": -1, "QBred2": 1},
     )
@@ -744,14 +847,14 @@ def get_zaks2012() -> Model:
     # r_q7: PQH₂ undocking from QB site
     m.add_reaction(
         "r_q7",
-        fn= mass_action_1s,
+        fn=mass_action_1s,
         args=["PQH2undock", "QBred2"],
         stoichiometry={"QBred2": -1, "PQH2": 1},
     )
     # r_q8: PQH₂ re-docking (reverse, ÷10)
     m.add_reaction(
         "r_q8",
-        fn= r_q8,
+        fn=r_q8,
         args=["PQH2undock", "PQH2frac"],
         stoichiometry={"PQH2": -1, "QBred2": 1},
     )
@@ -763,8 +866,8 @@ def get_zaks2012() -> Model:
     # Stoichiometry: consumes PQH₂, produces PQ, reduces PC, pumps 4H⁺ into lumen.
 
     m.add_reaction(
-        "r_cyt_b6f", 
-        fn = r_cyt,
+        "r_cyt_b6f",
+        fn=r_cyt,
         args=["QReoxidationRate", "frac_active_cyt", "frac_active_pc", "frac_pq_red"],
         stoichiometry={
             "PQH2": -1,
@@ -772,7 +875,7 @@ def get_zaks2012() -> Model:
             "PCr": Derived(fn=cyt_electron_stoi, args=["ElectronsPerPC"]),
             "LumenProtons": Derived(fn=cyt_proton_stoi, args=["Na", "LumenVolume"]),
         },
-    ) # CHECK
+    )  # CHECK
 
     # ------------------------------------------------------------------
     # F5 – PSI
@@ -781,14 +884,14 @@ def get_zaks2012() -> Model:
     # r_psi_1: PC reduction of P700+
     m.add_reaction(
         "psi_1",
-        fn= psi_1,
+        fn=psi_1,
         args=["kETPCP700", "PCr", "P700ox"],
         stoichiometry={"PCr": -1, "P700ox": -1, "P700r": 1},
     )
     # r_psi_2: P700* reduces Fdx (light-driven)
     m.add_reaction(
         "psi_2",
-        fn= psi_2,
+        fn=psi_2,
         args=["LightIntensity", "PSIcrossSection", "kETP700Fdx", "P700r", "Fdxox"],
         stoichiometry={"P700r": -1, "P700ox": 1, "Fdxr": 1, "Fdxox": -1, "TotalLEF": 1},
     )
@@ -802,7 +905,10 @@ def get_zaks2012() -> Model:
         fn=proton_flux_atp,
         args=["ATPConductivity", "pmf", "thresholdpmf", "ActiveATPs"],
         stoichiometry={
-            "ATP": Derived( fn=atp_stoi, args=["Na", "LumenVolume", "lumenVolumePerArea", "ATPperProton"]),
+            "ATP": Derived(
+                fn=atp_stoi,
+                args=["Na", "LumenVolume", "lumenVolumePerArea", "ATPperProton"],
+            ),
             "LumenProtons": Derived(fn=atpsyn_proton_stoi, args=["lumenVolumePerArea"]),
         },
     )
@@ -836,23 +942,41 @@ def get_zaks2012() -> Model:
     m.add_reaction(
         "flux_Mg",
         fn=lumen_ion_flux,
-        args=["LumenMg", "StromaMgStart", "deltamuMg",
-              "PMg", "voltsperlog", "lumenVolumePerArea"],
+        args=[
+            "LumenMg",
+            "StromaMgStart",
+            "deltamuMg",
+            "PMg",
+            "voltsperlog",
+            "lumenVolumePerArea",
+        ],
         stoichiometry={"LumenMg": 1},
     )
     m.add_reaction(
         "flux_Cl",
         fn=lumen_ion_flux,
-        args=["LumenCl", "StromaClStart", "deltamuCl",
-              "PCl", "voltsperlog", "lumenVolumePerArea"],
+        args=[
+            "LumenCl",
+            "StromaClStart",
+            "deltamuCl",
+            "PCl",
+            "voltsperlog",
+            "lumenVolumePerArea",
+        ],
         stoichiometry={"LumenCl": 1},
     )
     # NOTE: public MATLAB uses PCl (not PK) for the K flux — preserved here.
     m.add_reaction(
         "flux_K",
         fn=lumen_ion_flux,
-        args=["LumenK", "StromaKStart", "deltamuK",
-              "PCl", "voltsperlog", "lumenVolumePerArea"],
+        args=[
+            "LumenK",
+            "StromaKStart",
+            "deltamuK",
+            "PCl",
+            "voltsperlog",
+            "lumenVolumePerArea",
+        ],
         stoichiometry={"LumenK": 1},
     )
 
@@ -882,5 +1006,3 @@ def get_zaks2012() -> Model:
     )
 
     return m
-
-    
